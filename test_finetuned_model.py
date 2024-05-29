@@ -13,7 +13,7 @@ def predict(image_path, model, processor):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device)
     image = Image.open(image_path)
-    inputs = processor(images=image, text="Generate underlying data table of the figure below:", return_tensors="pt").to(device)
+    inputs = processor(images=image, text="Generate underlying data table of the figure below:", return_tensors="pt", add_special_tokens=True).to(device)
     predictions = model.generate(**inputs, max_new_tokens=512*6)
     return processor.decode(predictions[0], skip_special_tokens=True)
 
