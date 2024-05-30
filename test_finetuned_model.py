@@ -8,7 +8,7 @@ def load_trained_model(checkpoint_path):
     model.eval()
     return model
 
-def predict(image_path, model, processor):
+def predict(image_path, model):
     processor = Pix2StructProcessor.from_pretrained('google/deplot')
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device)
@@ -23,7 +23,7 @@ def print_prediction(prediction):
         print(line)
 
 # Load the trained model from a specific checkpoint
-checkpoint_path = "weights/deplot_format_label_epoch_39.bin"  # Specify the checkpoint you want to load
+checkpoint_path = "weights/reform2_epoch_34.bin"  # Specify the checkpoint you want to load
 trained_model = load_trained_model(checkpoint_path)
 
 # Perform inference on a new image
