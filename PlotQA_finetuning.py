@@ -4,24 +4,32 @@ import torch
 from PIL import Image
 import pandas as pd
 from torch.utils.data import Dataset, DataLoader
-from transformers import Pix2StructProcessor, Pix2StructForConditionalGeneration, TrainingArguments, Trainer
+from transformers import Pix2StructProcessor, Pix2StructForConditionalGeneration
 from datasets import Dataset as HFDataset
 
-json_path = './deplot_format_label.json' # annotation 이름 수정해줘야 함
+
+### path ###
+code_version = 'v3'
+json_file_name = 'deplot_format_label'
+json_path = f'./{json_file_name}.json'
+image_path = './png/'
+NUMBER_OF_IMAGES = 100 # 학습할 이미지 개수 지정 [:N개]
+MAX_PATCHES = 1024
+EPOCHS = 50
+### #### ###
+
+### Global ###
 with open(json_path, 'r') as f:
     data = json.load(f)
-
-data_list = [{"image": os.path.join('./chart_image/', f"{idx}.png"), "text": text} for idx, text in data.items()]
-df = pd.DataFrame(data_list[:300]) # 학습할 이미지 개수 지정 [:N개]
-
+data_list = [{"image": os.path.join(image_path, f"{idx}.png"), "text": text} for idx, text in data.items()]
+df = pd.DataFrame(data_list[:NUMBER_OF_IMAGES]) 
 dataset = HFDataset.from_pandas(df)
 
 processor = Pix2StructProcessor.from_pretrained('google/deplot')
+### #### ###
 
 def load_image(image_path):
     return Image.open(image_path)
-
-MAX_PATCHES = 1024
 
 class ImageCaptioningDataset(Dataset):
     def __init__(self, dataset, processor):
@@ -34,7 +42,7 @@ class ImageCaptioningDataset(Dataset):
     def __getitem__(self, idx):
         item = self.dataset[idx]
         image = load_image(item["image"]) 
-        encoding = self.processor(images=image, text="Generate underlying data table of the figure below:", return_tensors="pt", add_special_tokens=True, max_patches=MAX_PATCHES)
+        encoding = self.processor(images=image, text="", return_tensors="pt", add_special_tokens=True, max_patches=MAX_PATCHES)
         encoding = {k: v.squeeze() for k, v in encoding.items()}
         encoding["text"] = item["text"]
         return encoding
@@ -61,7 +69,6 @@ def main():
     train_dataset = ImageCaptioningDataset(dataset, processor)
     train_dataloader = DataLoader(train_dataset, shuffle=True, batch_size=2, collate_fn=collator)
 
-    EPOCHS = 50
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device)
@@ -96,10 +103,10 @@ def main():
         model_save_path = os.path.join(checkpoint_dir, f"model_epoch_{epoch}.bin")
         torch.save(model.state_dict(), model_save_path)
 
-        if (epoch + 1) % 10 == 0:
+        if epoch %  3 == 0:
             model.eval()
             predictions = model.generate(flattened_patches=flattened_patches, attention_mask=attention_mask)
-            print("Predictions:", processor.batch_decode(predictions, skip_special_tokens=True))
+            print("Predictions:", processor.batch_decode(predictions, skip_special_tokens=False))
             model.train()
 
 if __name__ == "__main__":
