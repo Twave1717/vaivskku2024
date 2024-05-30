@@ -12,24 +12,14 @@ with open(json_path, 'r') as f:
     data = json.load(f)
 
 data_list = [{"image": os.path.join('./chart_image/', f"{idx}.png"), "text": text} for idx, text in data.items()]
-df = pd.DataFrame(data_list[:300])
+df = pd.DataFrame(data_list[:300]) # 학습할 이미지 개수 지정 [:N개]
 
 dataset = HFDataset.from_pandas(df)
-print(dataset[0]['image'])
 
 processor = Pix2StructProcessor.from_pretrained('google/deplot')
 
 def load_image(image_path):
     return Image.open(image_path)
-
-# def tokenize_example(example):
-#     image = load_image(example["image"])
-#     return processor(images=image, text=example["text"], return_tensors="pt")
-
-# tokenized_dataset = dataset.map(tokenize_example, batched=False)
-# train_test_split = tokenized_dataset.train_test_split(test_size=0.1)
-# train_dataset = train_test_split['train']
-# eval_dataset = train_test_split['test']
 
 MAX_PATCHES = 1024
 
@@ -43,8 +33,8 @@ class ImageCaptioningDataset(Dataset):
 
     def __getitem__(self, idx):
         item = self.dataset[idx]
-        image = load_image(item["image"])  # Load the image here
-        encoding = self.processor(images=image, text=item["text"], return_tensors="pt", add_special_tokens=True)
+        image = load_image(item["image"]) 
+        encoding = self.processor(images=image, text="Generate underlying data table of the figure below:", return_tensors="pt", add_special_tokens=True, max_patches=MAX_PATCHES)
         encoding = {k: v.squeeze() for k, v in encoding.items()}
         encoding["text"] = item["text"]
         return encoding
